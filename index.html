@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>제7특수능력관리단 · 관제 단말</title>
+<meta name="description" content="아르카디아 제국군 제7특수능력관리단 인원 명부 열람 단말.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+KR:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --void:#0B0D0F;
+  --concrete:#15181C;
+  --panel:#1B1F24;
+  --line:#2A3037;
+  --line2:#3A424B;
+  --text:#C9CFD6;
+  --dim:#79828C;
+  --army:#8A7B3F;
+  --navy:#2F6E9E;
+  --air:#A9C4D8;
+  --nox:#9AA0A4;
+  --alert:#B23A2E;
+  --mono:"IBM Plex Mono",ui-monospace,monospace;
+  --sans:"IBM Plex Sans KR","IBM Plex Sans",system-ui,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;background:var(--void);color:var(--text);
+  font-family:var(--sans);font-weight:300;line-height:1.7;
+  -webkit-font-smoothing:antialiased;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:900;
+  background:repeating-linear-gradient(to bottom,rgba(255,255,255,.014) 0 1px,transparent 1px 3px);
+}
+a{color:inherit}
+button{font-family:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--air);outline-offset:2px}
+
+/* ---------- 부팅 ---------- */
+#boot{
+  position:fixed;inset:0;z-index:1000;background:var(--void);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:28px;padding:24px;text-align:center;
+}
+#boot .log{
+  font-family:var(--mono);font-size:11px;color:var(--dim);
+  letter-spacing:.06em;min-height:5.4em;text-align:left;width:min(320px,86vw);
+}
+#boot .log span{display:block;opacity:0;animation:logIn .01s forwards}
+@keyframes logIn{to{opacity:1}}
+#boot h1{
+  font-size:clamp(19px,5vw,28px);font-weight:600;letter-spacing:.18em;
+  margin:0;color:#E4E9EE;
+}
+#boot .sub{font-family:var(--mono);font-size:11px;letter-spacing:.24em;color:var(--dim);margin-top:-18px}
+#enter{
+  border:1px solid var(--line2);padding:13px 30px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.2em;color:#E4E9EE;
+  transition:background .2s,border-color .2s;
+}
+#enter:hover{background:var(--panel);border-color:var(--air)}
+body.booted #boot{opacity:0;pointer-events:none;transition:opacity .7s ease}
+
+/* ---------- HUD ---------- */
+.hud{
+  position:fixed;top:0;left:0;right:0;z-index:800;
+  background:rgba(11,13,15,.94);border-bottom:1px solid var(--line);
+  backdrop-filter:blur(6px);
+}
+.hud-in{
+  max-width:1180px;margin:0 auto;padding:9px 16px;
+  display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+}
+.hud-block{display:flex;align-items:center;gap:9px}
+.hud-lab{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--dim);white-space:nowrap}
+.segbar{display:flex;gap:2px;align-items:flex-end}
+.segbar i{width:4px;height:11px;background:var(--line);display:block}
+.segbar i.on{background:var(--text)}
+.segbar i.opt{box-shadow:inset 0 -2px 0 var(--line2)}
+.stabnum{font-family:var(--mono);font-size:14px;font-weight:600;color:#E4E9EE;min-width:2.4em}
+.trusts{display:flex;gap:12px}
+.tr{display:flex;align-items:center;gap:5px}
+.tr b{font-family:var(--mono);font-size:9.5px;font-weight:500;letter-spacing:.1em}
+.tr .bar{width:36px;height:3px;background:var(--line);position:relative}
+.tr .bar i{position:absolute;left:0;top:0;bottom:0;transition:width .4s ease}
+.tr.army b{color:var(--army)} .tr.army .bar i{background:var(--army)}
+.tr.navy b{color:var(--navy)} .tr.navy .bar i{background:var(--navy)}
+.tr.air  b{color:var(--air)}  .tr.air  .bar i{background:var(--air)}
+.aud{margin-left:auto;display:flex;align-items:center;gap:9px}
+.aud-btn{
+  font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--text);
+  border:1px solid var(--line);padding:5px 10px;transition:color .2s,border-color .2s;
+}
+.aud-btn:hover{border-color:var(--line2)}
+.aud-btn[aria-pressed="false"]{color:#4E565F;border-color:var(--line)}
+.aud-range{
+  -webkit-appearance:none;appearance:none;
+  width:64px;height:3px;background:var(--line);outline:none;cursor:pointer;
+}
+.aud-range::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:8px;height:13px;background:var(--text);cursor:pointer;
+}
+.aud-range::-moz-range-thumb{
+  width:8px;height:13px;background:var(--text);border:none;border-radius:0;cursor:pointer;
+}
+.aud-range:disabled{opacity:.35;cursor:default}
+.alertline{
+  font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--alert);
+  padding:0 16px 7px;max-width:1180px;margin:0 auto;display:none;
+}
+body.warn .alertline{display:block}
+
+/* ---------- 레이아웃 ---------- */
+main{max-width:1180px;margin:0 auto;padding:0 16px}
+section{padding:76px 0;border-bottom:1px solid var(--line)}
+.eyebrow{
+  font-family:var(--mono);font-size:10px;letter-spacing:.28em;color:var(--dim);
+  margin:0 0 14px;
+}
+h2{
+  font-size:clamp(20px,3.4vw,27px);font-weight:600;letter-spacing:.08em;
+  margin:0 0 18px;color:#E4E9EE;
+}
+
+/* ---------- 브리핑 ---------- */
+#brief{padding-top:112px;border-bottom:1px solid var(--line)}
+.title{
+  font-size:clamp(30px,8vw,62px);font-weight:700;letter-spacing:.02em;
+  line-height:1.15;margin:0 0 6px;color:#EDF1F5;
+}
+.title small{
+  display:block;font-family:var(--mono);font-size:clamp(10px,2.2vw,12px);
+  font-weight:400;letter-spacing:.32em;color:var(--dim);margin-bottom:14px;
+}
+.hook{font-size:clamp(15px,2.6vw,19px);font-weight:400;max-width:36em;margin:22px 0 0;color:#B9C1C9}
+.excerpt{
+  margin:34px 0 0;padding:20px 22px;border-left:2px solid var(--line2);
+  background:var(--concrete);font-size:14px;color:#A8B1BA;max-width:44em;
+}
+.excerpt p{margin:0 0 10px}
+.excerpt p:last-child{margin:0}
+.facts{
+  display:flex;flex-wrap:wrap;gap:0;margin-top:34px;
+  border-top:1px solid var(--line);border-left:1px solid var(--line);
+}
+.facts div{
+  flex:1 1 130px;padding:13px 15px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);
+}
+.facts dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--dim);margin:0 0 5px}
+.facts dd{margin:0;font-size:14px;font-weight:500;color:#E4E9EE}
+
+/* ---------- 명부 ---------- */
+.tools{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.chip{
+  font-family:var(--mono);font-size:11px;letter-spacing:.12em;
+  border:1px solid var(--line);padding:7px 14px;color:var(--dim);
+  transition:color .2s,border-color .2s;
+}
+.chip:hover{color:var(--text);border-color:var(--line2)}
+.chip[aria-pressed="true"]{color:#E4E9EE;border-color:currentColor}
+.chip[data-f="army"][aria-pressed="true"]{color:var(--army)}
+.chip[data-f="navy"][aria-pressed="true"]{color:var(--navy)}
+.chip[data-f="air"][aria-pressed="true"]{color:var(--air)}
+.count{margin-left:auto;font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--dim)}
+.count b{color:#E4E9EE;font-weight:500}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
+.card{
+  display:block;width:100%;text-align:left;padding:0;
+  background:var(--concrete);border:1px solid var(--line);
+  border-left:3px solid var(--spine,var(--line2));
+  transition:border-color .2s,background .2s,transform .2s;
+}
+.card:hover{background:var(--panel);border-top-color:var(--line2);border-right-color:var(--line2);border-bottom-color:var(--line2);transform:translateY(-2px)}
+.card .thumb{
+  aspect-ratio:3/4;background:#0F1215;position:relative;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;
+}
+.card .thumb img{width:100%;height:100%;object-fit:cover;object-position:center 22%;display:block}
+.card .thumb .miss{
+  font-family:var(--mono);font-size:10px;color:#3E464F;letter-spacing:.1em;
+}
+.card .no{
+  position:absolute;top:0;left:0;font-family:var(--mono);font-size:9.5px;
+  padding:3px 6px;background:rgba(11,13,15,.82);color:var(--dim);letter-spacing:.08em;
+}
+.card .meta{display:block;padding:10px 11px 12px}
+.card .rank{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.12em;color:var(--spine,var(--dim))}
+.card .name{display:block;font-size:14.5px;font-weight:500;color:#E4E9EE;margin:2px 0 4px;letter-spacing:.02em}
+.card .abil{display:block;font-size:11.5px;color:var(--dim);line-height:1.5}
+.card.army{--spine:var(--army)} .card.navy{--spine:var(--navy)} .card.air{--spine:var(--air)}
+.card[hidden]{display:none}
+
+/* ---------- 격리구역 ---------- */
+#iso .box{
+  border:1px solid var(--line);background:var(--concrete);
+  padding:clamp(24px,5vw,44px);text-align:center;
+}
+#iso .warnlab{
+  font-family:var(--mono);font-size:10px;letter-spacing:.26em;color:var(--alert);margin:0 0 12px;
+}
+#iso p{max-width:34em;margin:0 auto 24px;font-size:14px;color:#A8B1BA}
+.isobtn{
+  border:1px solid var(--line2);padding:13px 28px;
+  font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:#E4E9EE;
+  transition:background .2s,border-color .2s;
+}
+.isobtn:hover{background:var(--panel);border-color:var(--nox)}
+#noxWrap{display:none;margin-top:32px}
+body.nullified #noxWrap{display:block}
+body.nullified #isoEnter{display:none}
+.noxcard{
+  display:grid;grid-template-columns:minmax(0,190px) minmax(0,1fr);gap:22px;
+  text-align:left;align-items:start;max-width:620px;margin:0 auto;
+}
+.noxcard .thumb{aspect-ratio:3/4;background:#0F1215;border:1px solid var(--line)}
+.noxcard .thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.noxcard h3{margin:0 0 4px;font-size:20px;font-weight:600;letter-spacing:.06em;color:#E4E9EE}
+.noxcard .tagline{font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:var(--nox);margin:0 0 14px}
+.noxcard dl{margin:0;font-size:13px}
+.noxcard dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;color:var(--dim);margin-top:12px}
+.noxcard dd{margin:3px 0 0;color:#BCC3CA}
+#isoLeave{margin-top:30px}
+
+/* ---------- 모달 ---------- */
+.modal{
+  position:fixed;inset:0;z-index:850;display:none;
+  align-items:center;justify-content:center;padding:16px;
+  background:rgba(6,8,10,.9);
+}
+.modal[open]{display:flex}
+.sheet{
+  background:var(--concrete);border:1px solid var(--line);
+  border-left:3px solid var(--spine,var(--line2));
+  width:min(720px,100%);max-height:88vh;overflow:auto;
+  display:grid;grid-template-columns:minmax(0,240px) minmax(0,1fr);
+}
+.sheet .visual{background:#0F1215;position:relative}
+.sheet .visual img{width:100%;aspect-ratio:3/4;object-fit:cover;display:block}
+.sheet .visual .miss{
+  aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:11px;color:#3E464F;letter-spacing:.1em;
+}
+.emos{display:flex;flex-wrap:wrap;gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.emos button{
+  flex:1 1 auto;padding:8px 4px;background:var(--concrete);
+  font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--dim);
+}
+.emos button[aria-pressed="true"]{background:var(--panel);color:#E4E9EE}
+.sheet .info{padding:22px 24px 26px}
+.sheet .no{font-family:var(--mono);font-size:10px;letter-spacing:.18em;color:var(--dim)}
+.sheet h3{margin:6px 0 3px;font-size:23px;font-weight:600;letter-spacing:.04em;color:#EDF1F5}
+.sheet .rank{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--spine,var(--dim))}
+.sheet dl{margin:20px 0 0;font-size:13.5px}
+.sheet dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--dim);margin-top:15px}
+.sheet dd{margin:4px 0 0;color:#BCC3CA;line-height:1.65}
+.sheet dd.none{color:#525B65}
+.close{
+  position:absolute;top:0;right:0;z-index:2;padding:9px 13px;
+  font-family:var(--mono);font-size:12px;color:var(--text);background:rgba(11,13,15,.8);
+}
+
+/* ---------- 푸터 ---------- */
+footer{padding:60px 0 80px;text-align:center}
+footer .cta{
+  display:inline-block;border:1px solid var(--line2);padding:15px 38px;
+  font-family:var(--mono);font-size:12.5px;letter-spacing:.2em;text-decoration:none;color:#E4E9EE;
+  transition:background .2s,border-color .2s;
+}
+footer .cta:hover{background:var(--panel);border-color:var(--air)}
+footer .note{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:#4E565F;margin-top:26px}
+
+/* ---------- 무효화 ---------- */
+body.nullified #main,
+body.nullified .hud,
+body.nullified .modal{filter:grayscale(1) contrast(.92) brightness(.94)}
+body.nullified .chip{pointer-events:none;opacity:.45}
+body.nullified::after{
+  content:"";position:fixed;inset:0;z-index:880;pointer-events:none;
+  background:repeating-linear-gradient(to bottom,rgba(255,255,255,.03) 0 1px,transparent 1px 4px);
+  animation:drift 5s linear infinite;
+}
+@keyframes drift{to{background-position:0 40px}}
+.nullbadge{
+  display:none;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;color:var(--nox);
+}
+body.nullified .nullbadge{display:inline}
+body.nullified .stabnum{color:var(--nox)}
+
+@media (max-width:720px){
+  .sheet{grid-template-columns:1fr}
+  .noxcard{grid-template-columns:1fr;max-width:340px}
+  .hud-in{gap:12px;padding:8px 14px}
+  .aud{margin-left:auto}
+  .aud-range{width:52px}
+  .trusts{gap:9px}
+  section{padding:56px 0}
+  #brief{padding-top:128px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<!-- 부팅 -->
+<div id="boot">
+  <div class="log" id="bootlog"></div>
+  <h1>제7특수능력관리단</h1>
+  <p class="sub">ARCADIA · JOINT COMMAND · SECTOR 7</p>
+  <button id="enter">열람 시작</button>
+</div>
+
+<!-- HUD -->
+<div class="hud">
+  <div class="hud-in">
+    <div class="hud-block">
+      <span class="hud-lab">시설 안정도</span>
+      <span class="segbar" id="segbar"></span>
+      <span class="stabnum" id="stabnum">72</span>
+      <span class="nullbadge">FROZEN</span>
+    </div>
+    <div class="trusts">
+      <span class="tr army"><b>육</b><span class="bar"><i style="width:50%"></i></span></span>
+      <span class="tr navy"><b>해</b><span class="bar"><i style="width:50%"></i></span></span>
+      <span class="tr air"><b>공</b><span class="bar"><i style="width:50%"></i></span></span>
+    </div>
+    <div class="aud">
+      <button class="aud-btn" id="audBtn" aria-pressed="true">♪ <span id="audState">ON</span></button>
+      <input class="aud-range" id="audVol" type="range" min="0" max="100" value="50" aria-label="배경음 볼륨">
+    </div>
+  </div>
+  <div class="alertline" id="alertline"></div>
+</div>
+
+<div id="main">
+<main>
+
+  <!-- 브리핑 -->
+  <section id="brief">
+    <h1 class="title"><small>제7특수능력관리단 · 관제 단말</small>지하 8층까지,<br>전부 당신 소관입니다.</h1>
+    <p class="hook">아르카디아 제국군이 극비로 운영하는 능력자 부대. 육·해·공 삼군이 각자 공출한 21인이 한 시설에 갇혀 있고, 당신은 통합군령부가 내려보낸 감독관입니다. 어느 군에도 속하지 않기 때문에, 이들에게 명령할 수 있는 사람은 당신뿐입니다.</p>
+
+    <div class="excerpt">
+      <p>배치는 매일 바뀝니다. 능력에는 대가가 따르고, 대가를 누가 얼마나 치를지는 당신이 정합니다.</p>
+      <p>삼군은 각자 자기 쪽 인원을 좋은 임무에 넣으라고 압박합니다. 한쪽만 챙기면 나머지 둘이 등을 돌리고, 셋 다 챙기면 시설이 지나치게 조용해져 상부가 감사를 내려보냅니다.</p>
+    </div>
+
+    <dl class="facts">
+      <div><dt>편성</dt><dd>21인 / 삼군 공출</dd></div>
+      <div><dt>지휘</dt><dd>통합군령부 직할</dd></div>
+      <div><dt>안정도 최적</dt><dd>60 – 79</dd></div>
+      <div><dt>격리구역</dt><dd>지하 8층</dd></div>
+    </dl>
+  </section>
+
+  <!-- 명부 -->
+  <section id="roster">
+    <p class="eyebrow">I · 인원 명부</p>
+    <h2>공출 인원</h2>
+    <div class="tools">
+      <button class="chip" data-f="all" aria-pressed="true">전체</button>
+      <button class="chip" data-f="army" aria-pressed="false">육군</button>
+      <button class="chip" data-f="navy" aria-pressed="false">해군</button>
+      <button class="chip" data-f="air" aria-pressed="false">공군</button>
+      <span class="count">열람 가능 <b id="count">20</b> / 21</span>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- 격리구역 -->
+  <section id="iso">
+    <p class="eyebrow">II · 지하 8층</p>
+    <h2>격리구역</h2>
+    <div class="box">
+      <p class="warnlab">열람 권한 · 감독관 전용</p>
+      <p>명부에 잡히지 않는 인원이 한 명 있습니다. 창설 1호 피험자이며, 20년째 미분류 상태로 지하 8층에 상주 중입니다. 접근 시 이 단말의 계측이 정지할 수 있습니다.</p>
+      <button class="isobtn" id="isoEnter">격리구역 진입</button>
+
+      <div id="noxWrap">
+        <div class="noxcard">
+          <div class="thumb"><img id="noxImg" src="141.png" alt="녹스" loading="lazy"></div>
+          <div>
+            <h3>녹스 <span style="font-family:var(--mono);font-size:12px;color:var(--nox);letter-spacing:.14em">NOX</span></h3>
+            <p class="tagline">21 · 무소속 · 계급 없음</p>
+            <dl>
+              <dt>능력</dt>
+              <dd>무효화 — 범위 내 모든 능력 발현을 무산시킴. 상시 발동, 강도 조절 불가, 본인 의지로 정지 불가.</dd>
+              <dt>대가</dt>
+              <dd>자신에게도 예외 없이 적용됨. 관측하려는 시도까지 무효화되어 20년째 미분류. 노화도 무효화되어 외견이 정지함.</dd>
+              <dt>기록</dt>
+              <dd>20년 전 창설 1호 피험자. 역대 감독관 전원을 기억하고 있음.</dd>
+            </dl>
+          </div>
+        </div>
+        <button class="isobtn" id="isoLeave">관제 복귀</button>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <a class="cta" href="https://share.crack.wrtn.ai/pxhan6" target="_blank" rel="noopener">크랙에서 플레이</a>
+    <p class="note">제7특수능력관리단 · 비공식 팬 페이지</p>
+  </footer>
+</main>
+</div>
+
+<!-- 모달 -->
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mName">
+  <div class="sheet" id="sheet">
+    <div class="visual">
+      <button class="close" id="close" aria-label="닫기">✕</button>
+      <div id="mVisual"></div>
+      <div class="emos" id="mEmos"></div>
+    </div>
+    <div class="info">
+      <p class="no" id="mNo"></p>
+      <h3 id="mName"></h3>
+      <p class="rank" id="mRank"></p>
+      <dl>
+        <dt>능력</dt><dd id="mAbil"></dd>
+        <dt>대가</dt><dd id="mCost"></dd>
+        <dt>인물</dt><dd id="mNote"></dd>
+      </dl>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── 인원 명부 (순번 = 이미지 계산 기준. 순서를 바꾸면 이미지도 어긋납니다) ── */
+const EMO = ["대화","분노","슬픔","불안","아픔","부끄러움","기쁨"];
+const ROSTER = [
+  {n:1, f:"army", name:"하이넬 로트바흐", rank:"소장", core:true,
+   abil:"재생 부여 — 타인의 부상을 즉시 치유",
+   cost:"동일한 상처를 본인이 받음. 빠르게 회복되나 흉터는 남음",
+   note:"50대. 관리단 최선임이자 삼군 통틀어 최고참. 감독관과 대등하게 말하는 유일한 인물. 전신이 흉터투성이."},
+  {n:2, f:"army", name:"엘자 그리트", rank:"소령", core:true,
+   abil:"기억 열람 — 접촉한 상대의 기억 1건 조회",
+   cost:"조회한 기억이 상대에게서 일시 봉인됨. 수주 후 자연 복원",
+   note:"30대. 실무 총괄이자 감독관의 오른팔. 능력을 스스로 봉인 중. 관리단의 유일한 상식인."},
+  {n:3, f:"army", name:"베르나 슈타이거", rank:"소위", core:true,
+   abil:"발화 — 시야 내 대상 연소",
+   cost:"없음",
+   note:"20대 초. 최연소 에이스이자 관리단 최고 화력. 늘 장갑을 끼고 다니는데 본인은 그냥 습관이라고 한다."},
+  {n:4, f:"army", name:"이졸데 캄프", rank:"준위",
+   abil:"중력 조작 — 국소 중량 증감",
+   cost:"없음",
+   note:"30대. 과묵. 폭주 이력 2회로 관리단 유일의 감시 대상."},
+  {n:5, f:"army", name:"구드룬 베르크", rank:"중사",
+   abil:"지문 잔류 — 만진 물건에서 최근 접촉자 추적",
+   cost:"없음",
+   note:"20대 후반. 무뚝뚝한 수사 지원 요원."},
+  {n:6, f:"army", name:"레나테 뷔르거", rank:"중사",
+   abil:"근력 증폭 — 폭발적 신체 강화",
+   cost:"사용 후 근육 파열. 수일간 요양 필요",
+   note:"20대. 저돌적이고, 요양 명령을 늘 어긴다."},
+  {n:7, f:"army", name:"하니 페르가우", rank:"하사",
+   abil:"강철화 — 신체 경질화",
+   cost:"없음",
+   note:"10대 후반. 먹보 낙천가. 맞아도 안 아프다는 이유로 방패역을 맡고 있다."},
+
+  {n:8, f:"navy", name:"레온 아이거", rank:"준장", core:true,
+   abil:"심해 소환 — 국소 공간 수몰",
+   cost:"일시적 시야 상실. 수일 후 회복",
+   note:"50대. 해군 최선임. 한쪽 눈은 20년 전 사고로 이미 실명."},
+  {n:9, f:"navy", name:"비오라 산드로", rank:"중령", core:true,
+   abil:"구조 투시 — 접촉한 구조물의 결함 감지",
+   cost:"없음",
+   note:"30대. 완벽주의 설계자. 건물을 보면 결함을 지적하지 않고는 못 배긴다."},
+  {n:10, f:"navy", name:"마리엔 폰 되네르", rank:"대위", core:true,
+   abil:"수압 지배 — 액체 압축·사출",
+   cost:"없음",
+   note:"20대 후반. 해군 파벌 대표. 우아한 귀족풍이며 육군을 대놓고 무시한다."},
+  {n:11, f:"navy", name:"잉그리트 잘름", rank:"대위",
+   abil:"시간 지연 — 국소 시간 감속",
+   cost:"급격한 피로와 일시적 백발화. 요양 시 복구",
+   note:"30대. 결전 카드로 아껴 쓰이는 인원."},
+  {n:12, f:"navy", name:"틸다 아이헨", rank:"상사",
+   abil:"안개 생성 — 시야 차단·습도 조작",
+   cost:"없음",
+   note:"30대. 잔소리 많은 맏언니. 후배들 뒤치다꺼리를 도맡는다."},
+  {n:13, f:"navy", name:"미나 클로제", rank:"소위",
+   abil:"상처 전이 — 부상을 타인에게 이전",
+   cost:"이전량의 절반을 본인이 부담",
+   note:"20대 초. 능력의 성질 탓에 늘 죄책감에 시달린다."},
+  {n:14, f:"navy", name:"카린 슈베르트", rank:"소위",
+   abil:"수맥 감지 — 지하 수로·공동 탐지",
+   cost:"없음",
+   note:"10대 후반. 지하 시설 안내역. 지독한 길치인데 수맥은 기가 막히게 찾는다."},
+
+  {n:15, f:"air", name:"유리안 하르트", rank:"준장", core:true,
+   abil:"비행 — 완전 공중 기동",
+   cost:"착지 후 수 시간 보행 불가. 자연 회복",
+   note:"40대. 공군 최선임. 신생 군종이라 늘 예산을 구걸하고 다니는 프레젠테이션의 달인."},
+  {n:16, f:"air", name:"도로테아 린트", rank:"대위", core:true,
+   abil:"거짓 감지 — 직접 들은 진술의 허위 판별",
+   cost:"없음",
+   note:"20대 후반. 심문 전담이자 관리단의 정보 허브. 감독관에게도 거리낌 없이 능력을 쓴다."},
+  {n:17, f:"air", name:"니케 하르트만", rank:"중위",
+   abil:"전격 — 방전·전기 간섭",
+   cost:"없음",
+   note:"20대 초. 기록 경신에 집착한다. 무모한 게 아니라 매번 신기록을 노리는 것뿐이라고 주장한다."},
+  {n:18, f:"air", name:"프리다 잔더", rank:"중위",
+   abil:"원거리 청취 — 지정 좌표의 소리 수신",
+   cost:"없음",
+   note:"20대. 도청 전담. 아는 게 너무 많아서 늘 피곤해 보인다."},
+  {n:19, f:"air", name:"자비네 뫼비히", rank:"중위",
+   abil:"예지 섬광 — 3초 후 미래 열람",
+   cost:"단기 기억 혼탁. 하루면 복구",
+   note:"20대. 수첩이 없으면 아무것도 기억하지 못한다."},
+  {n:20, f:"air", name:"로렐라이 킴", rank:"소위",
+   abil:"풍압 — 기류 조작",
+   cost:"없음",
+   note:"20대. 비행 지원 최고 전문가. 니케 뒤치다꺼리에 지쳐 있다."}
+];
+const FLAB = {army:"육군", navy:"해군", air:"공군"};
+const imgNo = (n, emo) => (n - 1) * 7 + emo;
+
+/* ── 부팅 ── */
+const BOOTLOG = [
+  "> LINK  SECTOR-7 ......... OK",
+  "> AUTH  OVERSEER ......... OK",
+  "> LOAD  ROSTER 20/21 ..... OK",
+  "> LOAD  SUBLEVEL 8 ....... FAIL",
+  "> STAB  72 / OPT 60-79"
+];
+const log = document.getElementById("bootlog");
+BOOTLOG.forEach((l, i) => {
+  const s = document.createElement("span");
+  s.textContent = l;
+  s.style.animationDelay = (i * 0.16 + 0.1) + "s";
+  if (l.includes("FAIL")) s.style.color = "var(--alert)";
+  log.appendChild(s);
+});
+
+const bgm = new Audio("bgm.mp4");
+bgm.loop = true; bgm.volume = 0.5;
+const audBtn = document.getElementById("audBtn");
+const audVol = document.getElementById("audVol");
+const audState = document.getElementById("audState");
+let audOn = true, started = false;
+
+function setAudio(on) {
+  audOn = on;
+  audBtn.setAttribute("aria-pressed", on);
+  audState.textContent = on ? "ON" : "OFF";
+  audVol.disabled = !on;
+  if (!started) return;
+  if (on) bgm.play().catch(() => {}); else bgm.pause();
+}
+audBtn.addEventListener("click", () => setAudio(!audOn));
+audVol.addEventListener("input", () => {
+  bgm.volume = audVol.value / 100;
+  if (audVol.value > 0 && !audOn) setAudio(true);
+});
+
+document.getElementById("enter").addEventListener("click", () => {
+  document.body.classList.add("booted");
+  started = true;
+  bgm.volume = audVol.value / 100;
+  if (audOn) bgm.play().catch(() => {});
+  setTimeout(() => { const b = document.getElementById("boot"); if (b) b.remove(); }, 800);
+});
+
+/* ── 계측 ── */
+let stab = 72, trust = {army:50, navy:50, air:50}, lastF = null, frozen = false;
+const segbar = document.getElementById("segbar");
+for (let i = 0; i < 20; i++) {
+  const s = document.createElement("i");
+  if (i >= 12 && i <= 15) s.classList.add("opt");
+  segbar.appendChild(s);
+}
+function render() {
+  const segs = segbar.children, lit = Math.round(stab / 5);
+  for (let i = 0; i < 20; i++) segs[i].classList.toggle("on", i < lit);
+  document.getElementById("stabnum").textContent = frozen ? "––" : stab;
+  document.querySelectorAll(".tr").forEach(el => {
+    const k = el.classList.contains("army") ? "army" : el.classList.contains("navy") ? "navy" : "air";
+    el.querySelector("i").style.width = trust[k] + "%";
+  });
+  const al = document.getElementById("alertline");
+  if (frozen) { document.body.classList.remove("warn"); return; }
+  if (stab < 60) { document.body.classList.add("warn"); al.textContent = "! 안정도 하한 이탈 — 폭주 위험. 편중된 열람을 멈추십시오."; }
+  else if (stab > 79) { document.body.classList.add("warn"); al.textContent = "! 안정도 상한 이탈 — 과잉 안정. 상부 감사 대상이 됩니다."; }
+  else document.body.classList.remove("warn");
+}
+function measure(f) {
+  if (frozen) return;
+  stab = Math.max(0, Math.min(100, stab + (f === lastF ? -4 : 2)));
+  lastF = f;
+  trust[f] = Math.min(100, trust[f] + 5);
+  Object.keys(trust).forEach(k => { if (k !== f) trust[k] = Math.max(0, trust[k] - 2); });
+  render();
+}
+render();
+
+/* ── 카드 ── */
+const grid = document.getElementById("grid");
+ROSTER.forEach(p => {
+  const b = document.createElement("button");
+  b.className = "card " + p.f;
+  b.dataset.f = p.f;
+  b.innerHTML = `
+    <span class="thumb">
+      <span class="no">${String(p.n).padStart(2,"0")} · ${FLAB[p.f]}</span>
+      <img src="${imgNo(p.n,1)}.png" alt="${p.name}" loading="lazy" decoding="async">
+    </span>
+    <span class="meta">
+      <span class="rank">${p.rank}${p.core ? " ★" : ""}</span>
+      <span class="name">${p.name}</span>
+      <span class="abil">${p.abil.split(" — ")[0]}</span>
+    </span>`;
+  const img = b.querySelector("img");
+  img.addEventListener("error", () => {
+    img.replaceWith(Object.assign(document.createElement("span"), {
+      className: "miss", textContent: imgNo(p.n,1) + ".png"
+    }));
+  });
+  b.addEventListener("click", () => open(p));
+  grid.appendChild(b);
+});
+
+/* ── 필터 ── */
+document.querySelectorAll(".chip").forEach(c => {
+  c.addEventListener("click", () => {
+    document.querySelectorAll(".chip").forEach(x => x.setAttribute("aria-pressed", x === c));
+    const f = c.dataset.f;
+    let shown = 0;
+    document.querySelectorAll(".card").forEach(card => {
+      const ok = f === "all" || card.dataset.f === f;
+      card.hidden = !ok;
+      if (ok) shown++;
+    });
+    document.getElementById("count").textContent = shown;
+  });
+});
+
+/* ── 모달 ── */
+const modal = document.getElementById("modal");
+let current = null, emo = 1, lastFocus = null;
+function paint() {
+  const box = document.getElementById("mVisual");
+  const num = imgNo(current.n, emo);
+  box.innerHTML = `<img src="${num}.png" alt="${current.name} · ${EMO[emo-1]}">`;
+  box.querySelector("img").addEventListener("error", e => {
+    e.target.replaceWith(Object.assign(document.createElement("div"), {
+      className: "miss", textContent: num + ".png"
+    }));
+  });
+  document.querySelectorAll("#mEmos button").forEach((b, i) =>
+    b.setAttribute("aria-pressed", i + 1 === emo));
+}
+function open(p) {
+  current = p; emo = 1; lastFocus = document.activeElement;
+  document.getElementById("sheet").style.setProperty("--spine", `var(--${p.f})`);
+  document.getElementById("mNo").textContent = `NO.${String(p.n).padStart(2,"0")} · ${FLAB[p.f]} 공출`;
+  document.getElementById("mName").textContent = p.name;
+  document.getElementById("mRank").textContent = p.rank + (p.core ? " · 핵심 인원" : "");
+  document.getElementById("mAbil").textContent = p.abil;
+  const cost = document.getElementById("mCost");
+  cost.textContent = p.cost;
+  cost.className = p.cost === "없음" ? "none" : "";
+  document.getElementById("mNote").textContent = p.note;
+  const emos = document.getElementById("mEmos");
+  emos.innerHTML = "";
+  EMO.forEach((label, i) => {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.addEventListener("click", () => { emo = i + 1; paint(); });
+    emos.appendChild(b);
+  });
+  paint();
+  modal.setAttribute("open", "");
+  document.getElementById("close").focus();
+  measure(p.f);
+}
+function shut() {
+  modal.removeAttribute("open");
+  if (lastFocus) lastFocus.focus();
+}
+document.getElementById("close").addEventListener("click", shut);
+modal.addEventListener("click", e => { if (e.target === modal) shut(); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && modal.hasAttribute("open")) shut(); });
+
+/* ── 무효화 ── */
+const noxImg = document.getElementById("noxImg");
+noxImg.addEventListener("error", () => {
+  noxImg.replaceWith(Object.assign(document.createElement("div"), {
+    className: "miss", textContent: "141.png",
+    style: "aspect-ratio:3/4;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;color:#3E464F"
+  }));
+});
+document.getElementById("isoEnter").addEventListener("click", () => {
+  document.body.classList.add("nullified");
+  frozen = true; render();
+  document.getElementById("count").textContent = "––";
+  document.getElementById("isoLeave").focus();
+});
+document.getElementById("isoLeave").addEventListener("click", () => {
+  document.body.classList.remove("nullified");
+  frozen = false; render();
+  const active = document.querySelector('.chip[aria-pressed="true"]');
+  document.getElementById("count").textContent =
+    active.dataset.f === "all" ? 20 : ROSTER.filter(p => p.f === active.dataset.f).length;
+  document.getElementById("isoEnter").focus();
+});
+</script>
+</body>
+</html>
